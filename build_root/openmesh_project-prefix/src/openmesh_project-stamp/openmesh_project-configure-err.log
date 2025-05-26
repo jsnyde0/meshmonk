@@ -1,0 +1,36 @@
+CMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+CMake Error at CMakeLists.txt:44 (include):
+  include could not find requested file:
+
+    VCICommon
+
+
+CMake Error at CMakeLists.txt:51 (include):
+  include could not find requested file:
+
+    VCIOutput
+
+
+CMake Error at CMakeLists.txt:52 (include):
+  include could not find requested file:
+
+    VCIQt
+
+
+CMake Error at src/OpenMesh/Core/CMakeLists.txt:1 (include):
+  include could not find requested file:
+
+    VCICommon
+
+
+CMake Error at src/OpenMesh/Core/CMakeLists.txt:24 (vci_append_files):
+  Unknown CMake command "vci_append_files".
+
+

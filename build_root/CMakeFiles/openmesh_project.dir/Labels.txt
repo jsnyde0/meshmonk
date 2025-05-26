@@ -1,0 +1,13 @@
+# Target labels
+ openmesh_project
+# Source files and their labels
+/app/build_root/CMakeFiles/openmesh_project
+/app/build_root/CMakeFiles/openmesh_project.rule
+/app/build_root/CMakeFiles/openmesh_project-complete.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-build.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-configure.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-download.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-install.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-mkdir.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-patch.rule
+/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-update.rule

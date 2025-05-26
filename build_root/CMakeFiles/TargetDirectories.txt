@@ -1,0 +1,8 @@
+/app/build_root/CMakeFiles/openmesh_project.dir
+/app/build_root/CMakeFiles/meshmonk_shared.dir
+/app/build_root/CMakeFiles/edit_cache.dir
+/app/build_root/CMakeFiles/rebuild_cache.dir
+/app/build_root/CMakeFiles/list_install_components.dir
+/app/build_root/CMakeFiles/install.dir
+/app/build_root/CMakeFiles/install/local.dir
+/app/build_root/CMakeFiles/install/strip.dir

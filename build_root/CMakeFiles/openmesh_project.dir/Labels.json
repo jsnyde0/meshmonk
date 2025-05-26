@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/app/build_root/CMakeFiles/openmesh_project"
+		},
+		{
+			"file" : "/app/build_root/CMakeFiles/openmesh_project.rule"
+		},
+		{
+			"file" : "/app/build_root/CMakeFiles/openmesh_project-complete.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-build.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-configure.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-download.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-install.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-mkdir.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-patch.rule"
+		},
+		{
+			"file" : "/app/build_root/openmesh_project-prefix/src/openmesh_project-stamp/openmesh_project-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"openmesh_project"
+		],
+		"name" : "openmesh_project"
+	}
+}
