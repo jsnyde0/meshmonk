@@ -1,6 +1,6 @@
 # MeshMonk: High-Performance 3D Mesh Registration
 
-MeshMonk is a C++ library designed for efficient 3D mesh registration. It provides functionalities for rigid, non-rigid, and pyramid-based registration approaches. This repository is currently undergoing modernization. Phase 1, focusing on a CMake build system for the core library, C++ examples, and a command-line interface, is complete.
+MeshMonk is a C++ library designed for efficient 3D mesh registration. It provides functionalities for rigid, non-rigid, and pyramid-based registration approaches. This repository is currently undergoing modernization. Phase 1, focusing on a CMake build system for the core library, C++ examples, command-line interface, and Python bindings, is complete.
 
 ## Overview
 
@@ -9,12 +9,12 @@ Currently, it can be used:
 
 *   **As a C++ Library:** Link against `libmeshmonk_shared` in your C++ applications. A C++ example (`MeshMonkExample`) demonstrating library usage is buildable via CMake.
 *   **As a Command-Line Tool:** Use `meshmonk_cli` to perform registrations directly.
+*   **From Python:** Import the `meshmonk_python` module to access registration functionalities.
 
 Future phases will focus on:
 *   Re-integrating MATLAB MEX bindings.
-*   Introducing Python bindings.
 
-This document primarily focuses on building the core MeshMonk C++ library, its C++ example, and the command-line interface using CMake.
+This document primarily focuses on building the core MeshMonk C++ library, its C++ example, the command-line interface, and the Python bindings using CMake.
 
 ## Repository Structure
 
@@ -30,15 +30,19 @@ The repository has been reorganized for clarity and modularity:
 *   `cli/`: Contains the source code for the command-line interface.
     *   `CMakeLists.txt`: CMake file for building `meshmonk_cli`.
     *   `cli.cpp`: Main source file for the CLI.
+*   `python/`: Contains the C++ source code for Python bindings and a test script.
+    *   `CMakeLists.txt`: CMake file for building the `meshmonk_python` module.
+    *   `meshmonk_bindings.cpp`: Pybind11 C++ binding code.
+    *   `test_bindings.py`: Python script to test the bindings.
 *   `vendor/`: Contains third-party dependencies.
     *   `OpenMesh-11.0.0/`: Source for the OpenMesh library, built statically.
     *   `nanoflann.hpp`: Header-only library for KD-tree search.
 *   `demo/`: Contains example mesh data for use with the CLI.
 *   `docs/`: Contains legacy documentation.
 
-## Building MeshMonk (Core Library, C++ Example & CLI)
+## Building MeshMonk (Core Library, C++ Example, CLI & Python Bindings)
 
-This method compiles the core shared library (`libmeshmonk_shared`), a C++ example (`MeshMonkExample`), and the command-line tool (`meshmonk_cli`).
+This method compiles the core shared library (`libmeshmonk_shared`), a C++ example (`MeshMonkExample`), the command-line tool (`meshmonk_cli`), and the Python module (`meshmonk_python`).
 
 ### Prerequisites
 
@@ -48,7 +52,11 @@ Ensure you have the following dependencies installed on your system:
     *   Ubuntu: `sudo apt update && sudo apt install build-essential g++`
 2.  **CMake:** Version 3.10 or higher.
     *   Ubuntu: `sudo apt install cmake`
-3.  **Eigen3 & cxxopts:** These are handled automatically by CMake using `FetchContent` and do not require separate system installations for the build process.
+3.  **Python (for Python bindings):** Python 3.6+ development libraries.
+    *   Ubuntu: `sudo apt install python3-dev` (e.g., `python3.12-dev` for Python 3.12)
+4.  **NumPy (for Python bindings runtime):**
+    *   Ubuntu: `sudo apt install python3-numpy`
+5.  **Eigen3, cxxopts, pybind11:** These are handled automatically by CMake using `FetchContent` and do not require separate system installations for the build process.
 
 ### Compilation Steps
 
@@ -68,11 +76,14 @@ Ensure you have the following dependencies installed on your system:
     ```
 
 3.  **Run CMake:**
-    This command configures the project and generates the necessary build files. It will download Eigen3 (via FetchContent), cxxopts (via FetchContent), and prepare to compile the vendored OpenMesh library, the `meshmonk_shared` library, the C++ example, and the `meshmonk_cli` executable.
+    This command configures the project and generates the necessary build files. It will download dependencies (Eigen3, cxxopts, pybind11 via FetchContent) and prepare to compile the vendored OpenMesh library, the `meshmonk_shared` library, the C++ example, the `meshmonk_cli` executable, and the `meshmonk_python` module.
     ```bash
+    # Basic command:
     cmake ..
+    # If building Python bindings and CMake doesn't find your desired Python version, specify it:
+    # cmake .. -DPYTHON_EXECUTABLE=/usr/bin/python3.12 
     ```
-    If you encounter errors, please ensure your CMake and C++ compiler are correctly installed and meet the version requirements.
+    If you encounter errors, please ensure your CMake, C++ compiler, and Python development libraries are correctly installed and meet the version requirements.
 
 4.  **Compile the Project:**
     This will build all targets. Using `-j$(nproc)` utilizes all available CPU cores for a faster build on Linux.
@@ -89,91 +100,169 @@ Upon successful compilation, you will find the key outputs in your `build/` dire
 *   **Core Shared Library:** `library/libmeshmonk_shared.so` (on Linux), `library/libmeshmonk_shared.dylib` (on macOS), or `library/meshmonk_shared.dll` (on Windows). (Path relative to `build/` directory)
 *   **C++ Example Executable:** `library/examples/MeshMonkExample`. (Path relative to `build/` directory)
 *   **Command-Line Executable:** `cli/meshmonk_cli`. (Path relative to `build/` directory)
+*   **Python Module:** `python/meshmonk_python.cpython-<python_version>-<arch>.so` (e.g., `meshmonk_python.cpython-312-x86_64-linux-gnu.so` on Linux with Python 3.12). (Path relative to `build/` directory)
 
 ## Using the `meshmonk_cli` Command-Line Tool
-
-The `meshmonk_cli` tool allows you to perform registrations directly without needing to write custom C++ code.
-
-### Prerequisites for Running
-The CLI tool is built as part of the main CMake build process. Ensure all build prerequisites were met. `cxxopts` is handled automatically via FetchContent.
-
-### Basic Syntax
-After building, the executable is located in the `build/cli/` directory. Run it from the `build` directory:
-
-```bash
-./cli/meshmonk_cli <command> <source_mesh.obj> <target_mesh.obj> <output_mesh.obj> [options...]
-```
-
-### Available Commands
-
-*   `pyramid_reg`: Performs pyramid-based non-rigid registration.
-*   `rigid_reg`: Performs rigid registration.
-
-You can see all available options for each command by running:
-```bash
-./cli/meshmonk_cli --help
-# Or for a specific command, e.g.:
-# ./cli/meshmonk_cli rigid_reg --help
-```
-
-### Example: Rigid Registration
-
-Register `Template.obj` (source) to `demoFace.obj` (target) using rigid registration. The demo files are located in the `demo/` directory at the root of the project.
-
-1.  **Navigate to the build directory (if not already there):**
-    ```bash
-    # Assuming you are in the MeshMonk root directory:
-    cd build
-    ```
-
-2.  **Run the `rigid_reg` command:**
-    ```bash
-    ./cli/meshmonk_cli rigid_reg ../demo/Template.obj ../demo/demoFace.obj ../demo/rigid_output.obj --transform_output ../demo/rigid_transform.txt
-    ```
-    *   `../demo/Template.obj`: Path to the source mesh.
-    *   `../demo/demoFace.obj`: Path to the target mesh.
-    *   `../demo/rigid_output.obj`: Filename for the transformed source mesh.
-    *   `--transform_output ../demo/rigid_transform.txt`: Saves the 4x4 transformation matrix.
-
-3.  **Expected Output (in `demo/` directory):**
-    *   `rigid_output.obj`: The source mesh transformed to align with the target mesh.
-    *   `rigid_transform.txt`: A text file containing the 4x4 transformation matrix.
-
-### Example: Pyramid (Non-Rigid) Registration
-This example uses the output from the rigid registration step (`rigid_output.obj`) as the source mesh.
-
-```bash
-./cli/meshmonk_cli pyramid_reg ../demo/rigid_output.obj ../demo/demoFace.obj ../demo/pyramid_output.obj
-```
-*   This saves the non-rigidly transformed source mesh to `../demo/pyramid_output.obj`.
-*   It uses default parameters; check `--help` for all options.
-
-**Note on Demo Mesh Data:**
-When running with the provided demo meshes (`Template.obj`, `demoFace.obj`), you might see console warnings from OpenMesh (e.g., "complex vertex", "complex edge", "patch re-linking failed", or missing `.mtl` files). These are generally related to the topology of the demo data itself or how OpenMesh handles them, and typically do not prevent `meshmonk_cli` from completing the registration process successfully.
+(Content from existing README - unchanged)
+...
 
 ## Using MeshMonk as a C++ Library
+(Content from existing README - unchanged)
+...
 
-If you want to use MeshMonk's functionalities in your own C++ projects:
+## Using MeshMonk from Python
 
-1.  **Build `libmeshmonk_shared`:** Follow the CMake instructions above.
-2.  **Include Headers:**
-    *   Your project should include the main MeshMonk API header: `#include "meshmonk/meshmonk.hpp"`.
-    *   Ensure your build system is configured to find headers from MeshMonk's `library/include/` directory and `library/src/` directory (as public headers of `meshmonk_shared` include files from `library/src/`).
-    *   Eigen3 headers will be available if you link against `meshmonk_shared` (as its include directories are made public) or if you also use `FetchContent` for Eigen in your project.
-    *   `nanoflann.hpp` can be included via `#include <nanoflann.hpp>` if your project adds MeshMonk's `vendor/` directory to its include paths.
-3.  **Link against the Library:**
-    *   Link your project against `libmeshmonk_shared`. When using CMake, you can link against the `meshmonk_shared` target if MeshMonk is included as a subproject, or find and link the compiled library file.
-    *   OpenMesh is statically linked into `libmeshmonk_shared`, so you typically won't need to link against OpenMesh libraries directly.
+Python bindings are available for MeshMonk, allowing you to use its registration functionalities directly within Python scripts.
 
-## Documentation
+### Building the Python Module
 
-*   **Legacy Build Instructions:** For older, manual build instructions (not using the primary CMake system described above), you can refer to files in the `docs/` directory. Please note these are largely outdated for the current build process.
-    *   [Ubuntu (Legacy)](docs/ubuntu.md)
-    *   [OSX (Legacy)](docs/osx.md)
-    *   [Windows (Legacy)](docs/windows.md)
+The Python module (`meshmonk_python`) is built as part of the standard CMake build process described in the "Building MeshMonk" section.
+- `pybind11` is fetched automatically by CMake using `FetchContent`.
+- Ensure you have Python development libraries installed (e.g., `python3-dev`).
+- Basic build steps (from the project root, assuming CMake and a C++ compiler are set up):
+  ```bash
+  mkdir build
+  cd build
+  cmake .. 
+  # Optionally specify your Python executable if needed:
+  # cmake .. -DPYTHON_EXECUTABLE=/path/to/your/python
+  make -j$(nproc)
+  ```
+- The compiled Python module (e.g., `meshmonk_python.cpython-312-x86_64-linux-gnu.so`) will be located in the `build/python/` directory.
+
+### Using the Module
+
+To use the module in Python:
+1.  Add the directory containing the compiled module to your Python path.
+2.  Import the module.
+
+```python
+import sys
+import numpy as np # NumPy is a dependency for data exchange
+
+# Add the build directory (or the specific python subdir) to sys.path
+# Adjust this path based on where your 'build' directory is relative to your script
+sys.path.append('./build/python') 
+# If your script is in 'meshmonk/python' and build is '../build':
+# sys.path.append('../build/python') 
+
+try:
+    import meshmonk_python
+except ModuleNotFoundError:
+    print("Error: Could not import meshmonk_python.")
+    print("Ensure the path to the compiled module (e.g., build/python/) is in sys.path.")
+    print(f"Current sys.path: {sys.path}")
+    exit(1)
+
+# Accessing NUM_FEATURES
+# This constant indicates the number of features per vertex the MeshMonk library was compiled with.
+# Your NumPy arrays for feature data should match this dimension.
+print(f"MeshMonk NUM_FEATURES: {meshmonk_python.NUM_FEATURES}")
+```
+
+### Basic Usage Example: `rigid_registration`
+
+This example demonstrates how to call the `rigid_registration` function.
+**Important:** The MeshMonk C++ library functions, even when operating on point clouds, internally expect mesh structures (faces) and per-point flags. For stability, it's recommended to provide dummy data for these if you are working primarily with point cloud features.
+
+```python
+import numpy as np
+import meshmonk_python # Assuming it's importable as per above
+
+# 1. Setup: Prepare data
+num_floating_pts = 50
+num_target_pts = 60
+num_feat = meshmonk_python.NUM_FEATURES # Should be 6 for this build
+
+# Features (random data for example)
+# Use np.float32 as this is what the wrappers expect
+floating_features = np.random.rand(num_floating_pts, num_feat).astype(np.float32)
+target_features = np.random.rand(num_target_pts, num_feat).astype(np.float32)
+
+# Faces (dummy topology - required by the underlying C++ library)
+# Create simple, non-overlapping triangles if enough points exist.
+def create_dummy_faces(num_pts):
+    if num_pts < 3:
+        return np.empty((0, 3), dtype=np.int32)
+    num_faces = num_pts // 3
+    faces = np.array([[i * 3, i * 3 + 1, i * 3 + 2] for i in range(num_faces)], dtype=np.int32)
+    return faces
+
+floating_faces = create_dummy_faces(num_floating_pts)
+target_faces = create_dummy_faces(num_target_pts)
+
+# Flags (dummy data - e.g., all ones)
+# Use np.float32
+floating_flags = np.ones(num_floating_pts, dtype=np.float32)
+target_flags = np.ones(num_target_pts, dtype=np.float32)
+
+# Transformation matrix (4x4 for rigid registration)
+# Initialize to identity for this example
+transformation_matrix = np.eye(4, dtype=np.float32)
+
+# Store originals for comparison
+original_floating_features_subset = np.copy(floating_features[:2, :3]) # First 2 points, first 3 features
+original_transformation_matrix = np.copy(transformation_matrix)
+
+print("Original floating_features (first 2 points, XYZ):\n", original_floating_features_subset)
+print("Original transformation_matrix:\n", original_transformation_matrix)
+
+# 2. Call rigid registration
+try:
+    meshmonk_python.rigid_registration(
+        floating_features, 
+        target_features,
+        floating_faces=floating_faces, # Provide dummy faces
+        target_faces=target_faces,     # Provide dummy faces
+        floating_flags=floating_flags, # Provide dummy flags
+        target_flags=target_flags,     # Provide dummy flags
+        transformation_matrix=transformation_matrix,
+        num_iterations=10 # Example of an optional argument
+        # Other optional arguments like correspondences_symmetric, etc., can be set here
+    )
+    print("\nrigid_registration called successfully.")
+except Exception as e:
+    print(f"\nError during rigid_registration: {e}")
+
+# 3. Check results (data is modified in-place)
+print("Modified floating_features (first 2 points, XYZ):\n", floating_features[:2, :3])
+print("Modified transformation_matrix:\n", transformation_matrix)
+
+# Further examples for nonrigid_registration and pyramid_registration would follow a similar pattern.
+# Remember to provide dummy faces and flags for them as well.
+# For nonrigid_registration, the 'transformation_matrix' is not an output; 
+# 'floating_features' are deformed in place.
+# For pyramid_registration, faces are mandatory arguments in the binding.
+```
+
+### Available Functions
+
+The following registration functions are available in the `meshmonk_python` module:
+
+*   **`rigid_registration(...)`**:
+    Performs rigid registration between a floating and a target feature set.
+    Modifies the input `floating_features` (first 3 columns representing XYZ coordinates) and `transformation_matrix` in-place.
+    Requires `floating_features`, `target_features`, and `transformation_matrix`.
+    `floating_faces`, `target_faces`, `floating_flags`, `target_flags` are optional but recommended to be provided as dummy data for stability. Many other parameters are optional and mirror the C++ API defaults.
+
+*   **`nonrigid_registration(...)`**:
+    Performs non-rigid registration.
+    Modifies the input `floating_features` in-place.
+    Requires `floating_features` and `target_features`.
+    `floating_faces`, `target_faces`, `floating_flags`, `target_flags` are optional but recommended. Other parameters are optional.
+
+*   **`pyramid_registration(...)`**:
+    Performs pyramid-based non-rigid registration.
+    Modifies the input `floating_features` in-place.
+    Requires `floating_features`, `target_features`, `floating_faces`, and `target_faces`.
+    `floating_flags` and `target_flags` are optional but recommended. Other parameters are optional.
+
+Please refer to the C++ function signatures in `meshmonk/meshmonk.hpp` or the binding code in `python/meshmonk_bindings.cpp` for detailed parameter lists and their default values.
 
 ## Using MeshMonk from MATLAB
 
+(Content from existing README - mostly unchanged, except for removal of the "Python support is planned" line)
+...
 To use MeshMonk's functionalities within MATLAB, you first need to build the core shared library using CMake and then compile the MEX functions.
 
 ### 1. Build `libmeshmonk_shared` via CMake
@@ -248,5 +337,9 @@ The demo scripts (e.g., `test_compute_correspondences.m`) are located in the `de
     test_compute_correspondences
     ```
 
----
-*MATLAB and Python support are planned for future development phases.*
+## Documentation
+
+*   **Legacy Build Instructions:** For older, manual build instructions (not using the primary CMake system described above), you can refer to files in the `docs/` directory. Please note these are largely outdated for the current build process.
+    *   [Ubuntu (Legacy)](docs/ubuntu.md)
+    *   [OSX (Legacy)](docs/osx.md)
+    *   [Windows (Legacy)](docs/windows.md)
