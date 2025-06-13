@@ -1,0 +1,15 @@
+# Simple quad mesh
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.0 1.0 0.0
+v 1.0 1.0 0.0
+
+# Vertex normals (optional, but good for testing feature generation)
+vn 0.0 0.0 1.0
+vn 0.0 0.0 1.0
+vn 0.0 0.0 1.0
+vn 0.0 0.0 1.0
+
+# Faces (referencing vertices and vertex normals)
+f 1//1 2//2 3//3
+f 2//2 4//4 3//3
