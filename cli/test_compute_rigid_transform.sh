@@ -53,8 +53,8 @@ echo "Running compute_rigid_transform command..."
     "$INPUT_CORR_POINTS" \
     "$INPUT_INLIER_WEIGHTS" \
     "$OUTPUT_MESH" \
-    --transform_output "$OUTPUT_TRANSFORM" \
-    --use_scaling
+    --crt_transform_output "$OUTPUT_TRANSFORM" \
+    --crt_use_scaling
 
 # Check exit code
 CLI_EXIT_CODE=$?

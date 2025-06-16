@@ -1,0 +1,7 @@
+# 4 vertices, 2 faces
+v -nan -nan -nan
+v -nan -nan -nan
+v -nan -nan -nan
+v -nan -nan -nan
+f 1 2 3
+f 2 4 3

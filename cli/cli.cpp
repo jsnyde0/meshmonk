@@ -246,8 +246,8 @@ int main(int argc, char* argv[]) {
 
     // Compute Rigid Transform options
     options.add_options("compute_rigid_transform")
-        ("transform_output", "Output file for the 4x4 transformation matrix (TXT)", cxxopts::value<std::string>()->default_value(""))
-        ("use_scaling", "Enable scaling in computation", cxxopts::value<bool>()->default_value("false"));
+        ("crt_transform_output", "Output file for the 4x4 transformation matrix (TXT) for compute_rigid_transform", cxxopts::value<std::string>()->default_value(""))
+        ("crt_use_scaling", "Enable scaling in computation for compute_rigid_transform", cxxopts::value<bool>()->default_value("false"));
 
     auto result = options.parse(argc, argv);
 
@@ -308,7 +308,7 @@ int main(int argc, char* argv[]) {
     
     // OpenMesh containers
     MyMesh source_mesh, target_mesh, result_mesh, floating_mesh; // Added floating_mesh
-    Eigen::MatrixXi source_F_i, target_F_i, floating_F_i; // Added floating_F_i
+    Eigen::MatrixXi floating_F_i; // source_F_i and target_F_i declared above
 
     // Prepare data based on command
     FeatureMat source_features, target_features; // For pyramid_reg and rigid_reg
@@ -445,8 +445,8 @@ int main(int argc, char* argv[]) {
 
     } else if (command == "rigid_reg") {
         std::cout << "Executing rigid registration..." << std::endl;
-        // Accessing option from its specific group
-        std::string transform_output_file_opt = result["rigid_reg"]["transform_output"].as<std::string>();
+        // Accessing option directly as per cxxopts behavior for matched command group
+        std::string transform_output_file_opt = result["transform_output"].as<std::string>();
         Eigen::Matrix4f transform_matrix = Eigen::Matrix4f::Identity();
 
         meshmonk::rigid_registration(
@@ -461,7 +461,7 @@ int main(int argc, char* argv[]) {
             result["rigid_correspondences_equalize_push_pull"].as<bool>(),
             result["rigid_inlier_kappa"].as<float>(),
             result["rigid_inlier_use_orientation"].as<bool>(),
-            result["rigid_use_scaling"].as<bool>()
+            result["rigid_use_scaling"].as<bool>() // This option is from rigid_reg group
         );
         
         // Update result_mesh from the modified source_features (positions only)
@@ -481,8 +481,9 @@ int main(int argc, char* argv[]) {
         }
     } else if (command == "compute_rigid_transform") {
         std::cout << "Executing compute_rigid_transform..." << std::endl;
-        std::string transform_output_file_crt = result["compute_rigid_transform"]["transform_output"].as<std::string>();
-        bool use_scaling_crt = result["compute_rigid_transform"]["use_scaling"].as<bool>();
+        // Accessing options directly as per cxxopts behavior for matched command group
+        std::string transform_output_file_crt = result["crt_transform_output"].as<std::string>();
+        bool use_scaling_crt = result["crt_use_scaling"].as<bool>();
         Eigen::Matrix4f transform_matrix_crt = Eigen::Matrix4f::Identity();
 
         // Load corresponding points and inlier weights
