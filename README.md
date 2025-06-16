@@ -101,19 +101,68 @@ The CLI tool is built as part of the main CMake build process. Ensure all build 
 After building, the executable is located in the `build/cli/` directory. Run it from the `build` directory:
 
 ```bash
-./cli/meshmonk_cli <command> <source_mesh.obj> <target_mesh.obj> <output_mesh.obj> [options...]
+./cli/meshmonk_cli <command> <arg1> <arg2> <arg3> [arg4] [options...]
+```
+Note: The specific meaning of `arg1, arg2, ...` depends on the chosen `<command>`.
+
+### Available Commands and Options
+
+Detailed options for each command can be viewed by running `./cli/meshmonk_cli <command> --help` or `./cli/meshmonk_cli --help` for all commands.
+
+#### `pyramid_reg`
+Performs pyramid-based non-rigid registration. This method iteratively refines the alignment of the source mesh to the target mesh across multiple resolution levels, allowing for large deformations. It typically involves finding correspondences, filtering them, and applying a non-rigid transformation at each level.
+
+**Synopsis:**
+```bash
+./cli/meshmonk_cli pyramid_reg <source_mesh.obj> <target_mesh.obj> <output_mesh.obj> [options...]
+```
+*(Common options include those for controlling iterations, pyramid levels, correspondence search, and transformation parameters. Use `--help` for full details.)*
+
+#### `rigid_reg`
+Performs rigid registration. This method computes an optimal rotation, translation (and optionally, scaling) to globally align the source mesh to the target mesh.
+
+**Synopsis:**
+```bash
+./cli/meshmonk_cli rigid_reg <source_mesh.obj> <target_mesh.obj> <output_mesh.obj> [options...]
+```
+*(Common options include those for controlling iterations, correspondence search, and whether to use scaling. Use `--help` for full details.)*
+
+#### `compute_rigid_transform`
+Computes a single rigid transformation based on a given floating mesh, a set of pre-computed corresponding 3D points (targets), and per-correspondence inlier weights. The computed transformation is then applied to the floating mesh. This command is useful for custom registration pipelines, debugging transformation steps, or for single-step analysis where correspondences and weights are derived externally.
+
+**Synopsis:**
+```bash
+./cli/meshmonk_cli compute_rigid_transform <floating_mesh.obj> <corresponding_points.txt> <inlier_weights.txt> <output_mesh.obj> [options...]
 ```
 
-### Available Commands
+**Required Positional Arguments:**
+*   `<floating_mesh.obj>`: Path to the source (floating) mesh file in OBJ format.
+*   `<corresponding_points.txt>`: Path to a text file containing the target corresponding points. Each line defines a 3D point and its normal, corresponding by line number to a vertex in the floating mesh.
+*   `<inlier_weights.txt>`: Path to a text file containing inlier weights for each correspondence. Each line defines a float value (typically 0.0 to 1.0), corresponding by line number to a vertex in the floating mesh.
+*   `<output_mesh.obj>`: Filename for the output transformed mesh (OBJ format).
 
-*   `pyramid_reg`: Performs pyramid-based non-rigid registration.
-*   `rigid_reg`: Performs rigid registration.
+**Optional Arguments for `compute_rigid_transform`:**
+*   `--crt_transform_output <file>`: Specifies a file path to save the computed 4x4 transformation matrix (TXT format).
+*   `--crt_use_scaling`: If present, enables scaling as part of the rigid transformation computation (default is false, i.e., only rotation and translation).
+
+**Input File Formats for `compute_rigid_transform`:**
+*   **Corresponding Points File (`<corresponding_points.txt>`):**
+    *   A plain text file.
+    *   Each line must contain six space-separated floating-point numbers: `x y z nx ny nz`.
+        *   `x y z`: Coordinates of the target corresponding point.
+        *   `nx ny nz`: Normal vector associated with the target corresponding point.
+    *   The number of lines in this file must exactly match the number of vertices in the `<floating_mesh.obj>` and the number of lines in the `<inlier_weights.txt>` file.
+*   **Inlier Weights File (`<inlier_weights.txt>`):**
+    *   A plain text file.
+    *   Each line must contain a single floating-point number representing the weight of the corresponding vertex pair. This value typically ranges from 0.0 (outlier) to 1.0 (strong inlier).
+    *   The number of lines in this file must exactly match the number of vertices in the `<floating_mesh.obj>` and the number of lines in the `<corresponding_points.txt>` file.
 
 You can see all available options for each command by running:
 ```bash
 ./cli/meshmonk_cli --help
 # Or for a specific command, e.g.:
 # ./cli/meshmonk_cli rigid_reg --help
+# ./cli/meshmonk_cli compute_rigid_transform --help
 ```
 
 ### Example: Rigid Registration
