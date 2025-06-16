@@ -1,118 +1,128 @@
 #!/bin/bash
 
 # Script to test the compute_rigid_transform command of meshmonk_cli
+# using a simple, verifiable test case.
 
-# Determine script directory
+# --- Configuration ---
+set -e # Exit immediately if a command exits with a non-zero status.
+set -o pipefail # The return value of a pipeline is the status of the last command to exit with a non-zero status.
+
+# --- Directories and Paths ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$SCRIPT_DIR" # Script is in cli/
-BUILD_DIR="$SCRIPT_DIR/../build" # Assuming build is a sibling of cli's parent
+BUILD_DIR="$SCRIPT_DIR/../build"
 EXECUTABLE="$BUILD_DIR/cli/meshmonk_cli"
-TEST_DATA_DIR="$CLI_DIR/test_data"
+TEST_DATA_BASE_DIR="$SCRIPT_DIR/test_data"
+TEST_DATA_DIR="$TEST_DATA_BASE_DIR/rigid_transform"
 
-# Output files
-OUTPUT_MESH="$TEST_DATA_DIR/output_mesh.obj"
-OUTPUT_TRANSFORM="$TEST_DATA_DIR/output_transform.txt"
+# --- Input Files (8-point cube for pure translation) ---
+INPUT_MESH_OBJ="$TEST_DATA_DIR/input_mesh.obj"
+INPUT_FEATURES="$TEST_DATA_DIR/corresponding_features.txt"
+INPUT_WEIGHTS="$TEST_DATA_DIR/inlier_weights.txt"
 
-# Input files
-INPUT_MESH="$TEST_DATA_DIR/sample_mesh.obj"
-INPUT_CORR_POINTS="$TEST_DATA_DIR/sample_corresponding_points.txt"
-INPUT_INLIER_WEIGHTS="$TEST_DATA_DIR/sample_inlier_weights.txt"
+# --- Expected Output Files (For verification) ---
+EXPECTED_TRANSFORM="$TEST_DATA_DIR/expected_transform.txt"
 
-# Function to print error and exit
+# --- Generated Output Files (Will be created by this script) ---
+OUTPUT_MESH_OBJ="$TEST_DATA_DIR/output_mesh_generated.obj"
+OUTPUT_TRANSFORM="$TEST_DATA_DIR/output_transform_generated.txt"
+
+# --- Helper Functions ---
 fail() {
-    echo "Test failed: $1"
+    echo "🔴 Test failed: $1"
     exit 1
 }
 
-# Clean up previous output files
-rm -f "$OUTPUT_MESH" "$OUTPUT_TRANSFORM"
+# Function to compare two files containing floating-point numbers with a tolerance.
+# This version is robust to differences in whitespace and line breaks.
+compare_matrices() {
+    local file1="$1"
+    local file2="$2"
+    local tolerance="$3"
 
-# Check if executable exists
+    # Read all numbers from both files into arrays, ignoring whitespace and newlines.
+    local arr1=($(cat "$file1"))
+    local arr2=($(cat "$file2"))
+
+    # Check if the number of elements is the same
+    if [ "${#arr1[@]}" -ne "${#arr2[@]}" ]; then
+        echo "Files have a different number of numeric values."
+        echo "  File 1 (${#arr1[@]} values): ${arr1[*]}"
+        echo "  File 2 (${#arr2[@]} values): ${arr2[*]}"
+        return 1
+    fi
+
+    # Compare elements one by one
+    for i in "${!arr1[@]}"; do
+        # Use awk for robust floating point comparison
+        local result=$(awk -v v1="${arr1[$i]}" -v v2="${arr2[$i]}" -v tol="$tolerance" '
+            BEGIN {
+                diff = v1 - v2;
+                if (diff < 0) diff = -diff;
+                if (diff > tol) {
+                    exit 1; # Fails if difference is greater than tolerance
+                }
+                exit 0; # Succeeds otherwise
+            }
+        ')
+        if [ $? -ne 0 ]; then
+            echo "Mismatch at element $((i+1)):"
+            echo "  Expected: ${arr1[$i]}"
+            echo "  Got:      ${arr2[$i]}"
+            return 1
+        fi
+    done
+
+    return 0
+}
+
+
+# --- Main Script ---
+echo "▶️  Starting test for 'compute_rigid_transform'..."
+
+# 1. Clean up previous output files
+echo "  - Cleaning up old output files..."
+rm -f "$OUTPUT_MESH_OBJ" "$OUTPUT_TRANSFORM"
+
+# 2. Check for required executable and files
+echo "  - Verifying that required files exist..."
 if [ ! -f "$EXECUTABLE" ]; then
-    echo "Error: Executable not found at $EXECUTABLE"
-    echo "Please build the CLI first (e.g., in a 'build' directory sibling to the repo root)."
-    fail "Executable missing."
+    fail "Executable not found at $EXECUTABLE. Please build the project first."
 fi
+if [ ! -f "$INPUT_MESH_OBJ" ] || [ ! -f "$INPUT_FEATURES" ] || [ ! -f "$INPUT_WEIGHTS" ]; then
+    fail "One or more test data files not found in $TEST_DATA_DIR. Please generate them first."
+fi
+echo "  - All required files found."
 
-# Check if input files exist
-if [ ! -f "$INPUT_MESH" ]; then
-    fail "Input mesh $INPUT_MESH not found."
-fi
-if [ ! -f "$INPUT_CORR_POINTS" ]; then
-    fail "Input corresponding points $INPUT_CORR_POINTS not found."
-fi
-if [ ! -f "$INPUT_INLIER_WEIGHTS" ]; then
-    fail "Input inlier weights $INPUT_INLIER_WEIGHTS not found."
-fi
-
-
-# Run the command
-echo "Running compute_rigid_transform command..."
+# 3. Run the CLI command with POSITIONAL arguments
+echo "  - Running 'meshmonk_cli compute_rigid_transform'..."
 "$EXECUTABLE" compute_rigid_transform \
-    "$INPUT_MESH" \
-    "$INPUT_CORR_POINTS" \
-    "$INPUT_INLIER_WEIGHTS" \
-    "$OUTPUT_MESH" \
-    --crt_transform_output "$OUTPUT_TRANSFORM" \
-    --crt_use_scaling
+    "$INPUT_MESH_OBJ" \
+    "$INPUT_FEATURES" \
+    "$INPUT_WEIGHTS" \
+    "$OUTPUT_MESH_OBJ" \
+    --crt_transform_output "$OUTPUT_TRANSFORM"
 
 # Check exit code
 CLI_EXIT_CODE=$?
 if [ $CLI_EXIT_CODE -ne 0 ]; then
     fail "meshmonk_cli command failed with exit code $CLI_EXIT_CODE."
 fi
-echo "CLI command executed successfully."
+echo "  - CLI command executed successfully."
 
-# Check if output mesh was created and is not empty
-if [ ! -f "$OUTPUT_MESH" ]; then
-    fail "Output mesh file $OUTPUT_MESH was not created."
+# 4. Check that output files were created
+echo "  - Checking for generated output files..."
+if [ ! -s "$OUTPUT_MESH_OBJ" ] || [ ! -s "$OUTPUT_TRANSFORM" ]; then
+    fail "One or both output files ($OUTPUT_MESH_OBJ, $OUTPUT_TRANSFORM) were not created or are empty."
 fi
-if [ ! -s "$OUTPUT_MESH" ]; then
-    fail "Output mesh file $OUTPUT_MESH is empty."
-fi
-echo "Output mesh file $OUTPUT_MESH created and is not empty."
+echo "  - Output files were created successfully."
 
-# Check if output transform was created and is not empty
-if [ ! -f "$OUTPUT_TRANSFORM" ]; then
-    fail "Output transform file $OUTPUT_TRANSFORM was not created."
+# 5. Verify the output against expected results using the robust comparison
+echo "  - Verifying generated transformation matrix..."
+if ! compare_matrices "$EXPECTED_TRANSFORM" "$OUTPUT_TRANSFORM" "1e-5"; then
+    fail "Verification failed. The generated transformation matrix does not match the expected one."
 fi
-if [ ! -s "$OUTPUT_TRANSFORM" ]; then
-    fail "Output transform file $OUTPUT_TRANSFORM is empty."
-fi
-echo "Output transform file $OUTPUT_TRANSFORM created and is not empty."
+echo "  - Transformation matrix is correct."
 
-# Basic content check for transform matrix (should contain 4 lines for a 4x4 matrix)
-NUM_LINES_TRANSFORM=$(wc -l < "$OUTPUT_TRANSFORM")
-if [ "$NUM_LINES_TRANSFORM" -ne 4 ]; then
-    # The save_transform_matrix function in cli.cpp adds an extra newline with `outfile << transform << std::endl;`
-    # Eigen's default stream output for a 4x4 matrix is 4 lines, each ending with \n. The final std::endl makes it 5.
-    # Let's adjust the C++ code to not add an extra std::endl if Eigen already does.
-    # For now, allowing 4 or 5. A stricter test would require fixing the C++ output.
-    # Actually, Eigen's operator<< for Matrix typically prints line by line without an extra final endl on the whole matrix.
-    # The `outfile << transform << std::endl;` in `save_transform_matrix` will add one trailing newline to what Eigen prints.
-    # If Eigen prints 4 lines, each with \n, then the `std::endl` makes it 5 lines effectively if the last Eigen line also had \n.
-    # If Eigen prints M lines and the last line doesn't have \n, then `std::endl` makes it M lines.
-    # Let's assume Eigen prints 4 lines, each ending with \n. So `outfile << transform;` would be 4 lines.
-    # `outfile << transform << std::endl;` would make the file have the 4 lines from Eigen, then an additional blank line. So 5 lines.
-    # If the last Eigen line already has \n, then `std::endl` adds another, making it 5.
-    # Let's assume the C++ code `outfile << transform << std::endl;` means the output will be 4 lines of matrix data + 1 blank line = 5 lines.
-    # The current `save_transform_matrix` is `outfile << transform << std::endl;`. Eigen's default output for a matrix to a stream includes newlines for each row.
-    # So, a 4x4 matrix will be printed as 4 lines by Eigen. The additional `std::endl` will add a 5th (possibly blank) line.
-    # Let's assume 4 lines of actual data. A simple check is that it has at least 4 lines.
-    # A more robust check for 4x4 matrix would be 4 lines and each line has 4 numbers.
-    # For now, let's just check it's not obviously wrong (e.g. 1 line).
-    # The `save_transform_matrix` function writes `outfile << transform << std::endl;`. Eigen's `operator<<` for matrices prints one row per line.
-    # So for a 4x4 matrix, Eigen prints 4 lines. The additional `std::endl` after the matrix means there will be 4 lines of matrix content
-    # and these 4 lines themselves will be terminated by newlines by Eigen. The final `std::endl` might add a 5th blank line or ensure the last line is terminated if Eigen doesn't.
-    # Let's check for 4 lines of content. `wc -l` counts newline characters. If there are 4 lines of text, each ending with a newline, it's 4.
-    # If `outfile << transform << std::endl;` is used, and `transform` itself is printed by Eigen as 4 lines each ending with `\n`,
-    # this will result in 4 lines of matrix content. The final `std::endl` ensures the file ends with a newline, which is typical.
-    # So, 4 lines is the expected output for a 4x4 matrix printed this way.
-    echo "Warning: Output transform file $OUTPUT_TRANSFORM has $NUM_LINES_TRANSFORM lines. Expected 4 for a 4x4 matrix."
-    # This is a soft fail for now, as the exact line count can be tricky with std::endl.
-    # fail "Output transform file $OUTPUT_TRANSFORM has incorrect number of lines: $NUM_LINES_TRANSFORM. Expected 4."
-fi
-
-echo "All checks passed."
-echo "Test passed"
+# --- Success ---
+echo "✅ All checks passed. Test successful!"
 exit 0
